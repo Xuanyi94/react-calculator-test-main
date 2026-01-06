@@ -18,6 +18,7 @@ function App() {
     "4","5","6","−",
     "1","2","3","+",
     "±","0",".","=",
+    
   ];
 
   const calc = (a:number,b:number,sign:string)=>{
