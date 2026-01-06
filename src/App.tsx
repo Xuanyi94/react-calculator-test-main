@@ -1,91 +1,119 @@
-//import { useState } from 'react'
-import { useState } from 'react';
-import './App.css'
-import Layout from './components/Layout'
-const baseClasses =
-  "h-16 w-full flex items-center justify-center text-xl font-semibold rounded-lg cursor-pointer transition duration-150 ease-in-out";
+import { useState } from "react";
+import "./App.css";
+import Layout from "./components/Layout";
 
-//const equalsClasses = 
-//            "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800";
-
-//const defaultClasses = 
-//            "bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 active:bg-gray-100";            
+const base =
+  "h-16 flex items-center justify-center text-xl font-semibold rounded-lg cursor-pointer transition hover:bg-gray-200 active:scale-95";
 
 function App() {
-  const [input1, setInput1] = useState("");
-  const [op, setOp] = useState("");
-  const [eq, setEq] = useState(false);
-  const [input2, setInput2] = useState("");
-  const [ans, setAns] = useState(0);
+  const [input, setInput] = useState("0");   // 目前輸入
+  const [prev, setPrev] = useState("");      // 前一個數
+  const [op, setOp] = useState("");          // 運算符
+  const [done, setDone] = useState(false);   // 是否剛按完 =
 
-  const signList = [
-    '%', 'CE', 'C', '⌫', // ⌫ 代表退格/刪除鍵 (Backspace)
-    '1/x', 'x²', '²√x', '÷',
-    '7', '8', '9', '×',
-    '4', '5', '6', '−', // 這裡使用數學上的減號 U+2212 '−'
-    '1', '2', '3', '+',
-    '±', '0', '.', '=',
+  const btns = [
+    "%","CE","C","⌫",
+    "1/x","x²","²√x","÷",
+    "7","8","9","×",
+    "4","5","6","−",
+    "1","2","3","+",
+    "±","0",".","=",
   ];
 
-const isNum = (sign:string) => {
-  return !isNaN(parseFloat(sign))
-};
-
-const handleCalc = (sign:string) => {
-  if (isNum(sign)){
-    if (op){
-      setInput2(input2 + sign);
-    }else{
-      setInput1(input1 + sign);
+  const calc = (a:number,b:number,sign:string)=>{
+    switch(sign){
+      case "+": return a+b;
+      case "−": return a-b;
+      case "×": return a*b;
+      case "÷": return b===0 ? NaN : a/b;
+      default: return b;
     }
-    return;
-  }
+  };
 
-  if("+" === sign){
-    setOp(sign);
-    return;
-  }
+  const handle = (s:string)=>{
+    const num = !isNaN(Number(s));
 
-  if ("=" === sign){
-    if("+"=== op){
-      setAns(parseFloat(input1)+parseFloat(input2));
-      setEq(true);
+    // 數字
+    if(num){
+      if(done){ setInput(s); setDone(false); return; }
+      setInput(input==="0" ? s : input+s);
+      return;
     }
 
-  }
-};
+    // .
+    if(s==="."){
+      if(!input.includes(".")) setInput(input+".");
+      return;
+    }
 
-const getDisplayText =()=>{
-  if(eq){
-    return ans+"";
-  }
+    // CE 清除目前
+    if(s==="CE"){ setInput("0"); return; }
 
-  if(op){
-    return input2;
-   }
-    return input1;
-};
+    // C 全部清
+    if(s==="C"){ setInput("0"); setPrev(""); setOp(""); return; }
+
+    // 退格
+    if(s==="⌫"){
+      setInput(input.length>1 ? input.slice(0,-1) : "0");
+      return;
+    }
+
+    // 正負
+    if(s==="±"){ setInput(String(Number(input)*-1)); return; }
+
+    // %
+    if(s==="%"){ setInput(String(Number(input)/100)); return; }
+
+    // 單鍵運算
+    if(s==="1/x"){ setInput(String(1/Number(input))); return; }
+    if(s==="x²"){ setInput(String(Math.pow(Number(input),2))); return; }
+    if(s==="²√x"){ setInput(String(Math.sqrt(Number(input)))); return; }
+
+    // =
+    if(s==="="){
+      if(!prev || !op) return;
+      const result = calc(Number(prev),Number(input),op);
+      setInput(String(result));
+      setPrev("");
+      setOp("");
+      setDone(true);
+      return;
+    }
+
+    // + - × ÷
+    if(["+","−","×","÷"].includes(s)){
+      if(prev && op && !done){
+        const result = calc(Number(prev),Number(input),op);
+        setPrev(String(result));
+      }else{
+        setPrev(input);
+      }
+      setInput("0");
+      setOp(s);
+      setDone(false);
+      return;
+    }
+  };
+
   return (
     <Layout>
-    
-      <input type='text' value={getDisplayText()} className="bg-green-100 p-4 mb-4 rounded-lg shadow-inner" />
-      <div className="grid grid-cols-4 gap-2 bg-gray-100 p-4 rounded-xl shadow-2xl max-w-sm mx-auto">
-        {
-          signList.map(
-            (sign, index) => {
+      <div className="max-w-sm mx-auto p-6 rounded-2xl bg-white shadow-2xl">
+        <input
+          value={input}
+          readOnly
+          className="w-full h-20 bg-green-100 rounded-xl text-right text-4xl px-4 shadow-inner mb-4"
+        />
 
-              return (
-                <div key={index} className={baseClasses} onClick={() => {handleCalc(sign);}}>
-                  {sign}
-                </div>
-              )
-            }
-          )
-        }
-
+        <div className="grid grid-cols-4 gap-2">
+          {btns.map((b,i)=>(
+            <div key={i} className={base} onClick={()=>handle(b)}>
+              {b}
+            </div>
+          ))}
+        </div>
       </div>
     </Layout>
-  )
+  );
 }
 
-export default App
+export default App;
